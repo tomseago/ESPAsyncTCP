@@ -37,7 +37,6 @@
 #ifdef ESP32
 #include "AsyncTCP.h"
 #else
-#error No!
 #include "ESPAsyncTCP.h"
 #endif
 
