@@ -20,7 +20,11 @@
 */
 #include "SyncClient.h"
 #include "Arduino.h"
+#ifdef ESP32
+#include "AsyncTCP.h"
+#else
 #include "ESPAsyncTCP.h"
+#endif
 #include "cbuf.h"
 
 

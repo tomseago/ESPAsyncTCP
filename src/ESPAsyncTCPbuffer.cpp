@@ -24,6 +24,7 @@
 
 
 #include <Arduino.h>
+
 #include <debug.h>
 
 #include "ESPAsyncTCPbuffer.h"
@@ -32,7 +33,8 @@
 AsyncTCPbuffer::AsyncTCPbuffer(AsyncClient* client) {
     if(client == NULL) {
         DEBUG_ASYNC_TCP("[A-TCP] client is null!!!\n");
-        panic();
+        // TS: Disabled because not on ESP32
+        // panic();
     }
 
     _client = client;
@@ -125,7 +127,8 @@ size_t AsyncTCPbuffer::write(const uint8_t *data, size_t len) {
 
             if(next == NULL) {
                 DEBUG_ASYNC_TCP("[A-TCP] run out of Heap!\n");
-                panic();
+                // TS: Disabled because not on ESP32
+                // panic();
             } else {
                 DEBUG_ASYNC_TCP("[A-TCP] new cbuf\n");
             }
@@ -539,3 +542,4 @@ size_t AsyncTCPbuffer::_handleRxBuffer(uint8_t *buf, size_t len) {
 
     return 0;
 }
+

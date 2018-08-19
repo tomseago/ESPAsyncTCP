@@ -21,6 +21,8 @@
 
 #include "Arduino.h"
 
+#ifdef ESP8266
+
 #include "ESPAsyncTCP.h"
 extern "C"{
   #include "lwip/opt.h"
@@ -1082,3 +1084,5 @@ err_t AsyncServer::_s_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *pb, err_
   return reinterpret_cast<AsyncServer*>(arg)->_recv(pcb, pb, err);
 }
 #endif
+
+#endif // #ifdef ESP8266

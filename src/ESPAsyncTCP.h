@@ -19,12 +19,15 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef ASYNCTCP_H_
-#define ASYNCTCP_H_
+#ifndef ESPASYNCTCP_H_
+#define ESPASYNCTCP_H_
+
 
 #include <async_config.h>
 #include "IPAddress.h"
 #include <functional>
+
+#ifdef ESP8266
 
 extern "C" {
     #include "lwip/init.h"
@@ -255,5 +258,6 @@ class AsyncServer {
 #endif
 };
 
+#endif // #ifdef ESP8266
 
-#endif /* ASYNCTCP_H_ */
+#endif /* ESPASYNCTCP_H_ */

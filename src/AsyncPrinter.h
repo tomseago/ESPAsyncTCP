@@ -23,7 +23,13 @@
 #define ASYNCPRINTER_H_
 
 #include "Arduino.h"
+
+#ifdef ESP32
+#include "AsyncTCP.h"
+#else
 #include "ESPAsyncTCP.h"
+#endif
+
 #include "cbuf.h"
 
 class AsyncPrinter;
