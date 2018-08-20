@@ -29,6 +29,8 @@
 
 #include "ESPAsyncTCPbuffer.h"
 
+#define pf Serial.printf
+//#define DEBUG_ASYNC_TCP Serial.printf
 
 AsyncTCPbuffer::AsyncTCPbuffer(AsyncClient* client) {
     if(client == NULL) {
@@ -51,6 +53,10 @@ AsyncTCPbuffer::AsyncTCPbuffer(AsyncClient* client) {
     _cbRX = NULL;
     _cbDone = NULL;
     _attachCallbacks();
+
+    // TS: While this _should_ be unnecessary, apparently it
+    // is important. Who needs C++ standards????
+    _inSendBuffer = false;
 }
 
 AsyncTCPbuffer::~AsyncTCPbuffer() {
@@ -102,7 +108,11 @@ size_t AsyncTCPbuffer::write(const char *data, size_t len) {
  * @param len
  * @return
  */
+uint32_t entryCount = 0;
 size_t AsyncTCPbuffer::write(const uint8_t *data, size_t len) {
+
+    // pf("EATB-> write #%d\n", entryCount++);
+
     if(_TXbufferWrite == NULL || _client == NULL || !_client->connected() || data == NULL || len == 0) {
         return 0;
     }
@@ -110,6 +120,7 @@ size_t AsyncTCPbuffer::write(const uint8_t *data, size_t len) {
     size_t bytesLeft = len;
     while(bytesLeft) {
         size_t w = _TXbufferWrite->write((const char*) data, bytesLeft);
+        // pf("EATB-> write(.,%d)=%d\n", bytesLeft, w);
         bytesLeft -= w;
         data += w;
         _sendBuffer();
@@ -153,6 +164,7 @@ void AsyncTCPbuffer::flush() {
         while(!_client->canSend()) {
             delay(0);
         }
+        // pf("EATB sb from flush()\n");
         _sendBuffer();
     }
 }
@@ -284,6 +296,7 @@ void AsyncTCPbuffer::_attachCallbacks() {
     _client->onPoll([](void *obj, AsyncClient* c) {
         AsyncTCPbuffer* b = ((AsyncTCPbuffer*)(obj));
         if((b->_TXbufferRead != NULL) && !b->_TXbufferRead->empty()) {
+            // pf("EATB sendBuffer from onPoll\n");
             b->_sendBuffer();
         }
         //    if(!b->_RXbuffer->empty()) {
@@ -293,6 +306,7 @@ void AsyncTCPbuffer::_attachCallbacks() {
 
     _client->onAck([](void *obj, AsyncClient* c, size_t len, uint32_t time) {
         DEBUG_ASYNC_TCP("[A-TCP] onAck\n");
+        // pf("EATB sendBuffer from onAck\n");
         ((AsyncTCPbuffer*)(obj))->_sendBuffer();
     }, this);
 
@@ -328,14 +342,28 @@ void AsyncTCPbuffer::_attachCallbacks() {
  */
 void AsyncTCPbuffer::_sendBuffer() {
     //DEBUG_ASYNC_TCP("[A-TCP] _sendBuffer...\n");
+
+    if (_inSendBuffer) {
+        // pf("EATB-> refusing to re-enter sendBuffer\n");
+        return;
+    }
+    _inSendBuffer = true;
+
     size_t available = _TXbufferRead->available();
+    // pf("EATB-> sendBuffer start avail=%d\n", available);
     if(available == 0 || _client == NULL || !_client->connected() || !_client->canSend()) {
+        // pf("EATB-> sendBuffer return immediate, c=%p C=%d cS=%d\n", _client, 
+            // _client ? _client->connected() : 0,
+            // _client ? _client->canSend() : 0
+            // );
+        _inSendBuffer = false;
         return;
     }
 
     while((_client->space() > 0) && (_TXbufferRead->available() > 0) && _client->canSend()) {
 
         available = _TXbufferRead->available();
+        // pf("  EATB----> a=%d\n", available);
 
         if(available > _client->space()) {
             available = _client->space();
@@ -344,6 +372,7 @@ void AsyncTCPbuffer::_sendBuffer() {
         char *out = new char[available];
         if(out == NULL) {
             DEBUG_ASYNC_TCP("[A-TCP] to less heap, try later.\n");
+            _inSendBuffer = false;
             return;
         }
 
@@ -352,6 +381,13 @@ void AsyncTCPbuffer::_sendBuffer() {
 
         // send data
         size_t send = _client->write((const char*) out, available);
+
+        // pf("EATB-> %d %d ", available, send);
+        // for(int i=0; i<send; i++) {
+        //     pf(" %d", out[i]);
+        // }
+        // pf("\n");
+
         if(send != available) {
             DEBUG_ASYNC_TCP("[A-TCP] write failed send: %d available: %d \n", send, available);
         }
@@ -361,7 +397,7 @@ void AsyncTCPbuffer::_sendBuffer() {
 
         // if buffer is empty and there is a other buffer in chain delete the empty one
         if(_TXbufferRead->available() == 0 && _TXbufferRead->next != NULL) {
-            cbuf * old = _TXbufferRead;
+            cbuf* old = _TXbufferRead;
             _TXbufferRead = _TXbufferRead->next;
             delete old;
             DEBUG_ASYNC_TCP("[A-TCP] delete cbuf\n");
@@ -369,7 +405,8 @@ void AsyncTCPbuffer::_sendBuffer() {
 
         delete out;
     }
-
+    // pf("EATB-> sendBuffer end\n");
+    _inSendBuffer = false;
 }
 
 /**

@@ -107,6 +107,9 @@ class AsyncTCPbuffer: public Print {
         uint8_t * _rxReadBytesPtr;
         String * _rxReadStringPtr;
 
+        // TS: Needed to protect _sendBuffer
+        bool _inSendBuffer;
+
         AsyncTCPbufferDataCb _cbRX;
         AsyncTCPbufferDoneCb _cbDone;
         AsyncTCPbufferDisconnectCb _cbDisconnect;
